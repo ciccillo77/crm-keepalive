@@ -1,0 +1,22 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    - cron: '0 6 */3 * *'   # ogni 3 giorni alle 06:00 UTC
+  workflow_dispatch:         # permette l'avvio manuale dal pulsante
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping del database Supabase
+        run: |
+          RISPOSTA=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: sb_publishable_I9_bWA5ImylRy1Vw6l7QAg_LrTYYYDU" \
+            "https://etjjluzilzoyvfzpqydd.supabase.co/rest/v1/keep_alive?select=ping")
+          echo "Risposta HTTP: $RISPOSTA"
+          if [ "$RISPOSTA" != "200" ]; then
+            echo "ERRORE: il ping non ha restituito 200. Il database potrebbe essere in pausa o la chiave non valida."
+            exit 1
+          fi
+          echo "Ping riuscito, database sveglio."
