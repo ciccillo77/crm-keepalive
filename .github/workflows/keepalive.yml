@@ -2,11 +2,11 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    - cron: '0 6 */3 * *'   # ogni 3 giorni alle 06:00 UTC
+    - cron: '0 6 * * *'    # OGNI GIORNO alle 06:00 UTC
   workflow_dispatch:
 
 permissions:
-  contents: write            # serve per scrivere il commit anti-60-giorni
+  contents: write
 
 jobs:
   ping:
@@ -15,17 +15,21 @@ jobs:
       - name: Scarica il repository
         uses: actions/checkout@v5
 
-      - name: Ping del database Supabase
+      - name: Scrittura sul database Supabase (attività reale)
         run: |
-          RISPOSTA=$(curl -s -o /dev/null -w "%{http_code}" \
+          ORA=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          RISPOSTA=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH \
             -H "apikey: sb_publishable_I9_bWA5ImylRy1Vw6l7QAg_LrTYYYDU" \
-            "https://etjjluzilzoyvfzpqydd.supabase.co/rest/v1/keep_alive?select=ping")
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"ping\":\"$ORA\"}" \
+            "https://etjjluzilzoyvfzpqydd.supabase.co/rest/v1/keep_alive?id=eq.1")
           echo "Risposta HTTP: $RISPOSTA"
-          if [ "$RISPOSTA" != "200" ]; then
-            echo "ERRORE: il ping non ha restituito 200."
+          if [ "$RISPOSTA" != "204" ] && [ "$RISPOSTA" != "200" ]; then
+            echo "ERRORE: la scrittura non e' riuscita (atteso 204)."
             exit 1
           fi
-          echo "Ping riuscito, database sveglio."
+          echo "Scrittura riuscita, database attivo."
 
       - name: Registra attività (evita il blocco 60 giorni di GitHub)
         run: |
